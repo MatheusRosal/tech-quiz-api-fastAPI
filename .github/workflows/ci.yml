@@ -20,7 +20,7 @@ jobs: # tarefas grandes da pipeline
       - name: Configurar Python
         uses: actions/setup-python@v5  # instala/configura Python
         with:
-        python-version: "3.13"
+          python-version: "3.13"
 
       - name: Instalar dependências
         run: |
