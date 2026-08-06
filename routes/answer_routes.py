@@ -8,4 +8,4 @@ router = APIRouter()
 
 @router.post("/answers/evaluate", response_model=AnswerEvaluationResponse)
 def evaluate_user_answer(payload: AnswerEvaluationRequest):
-    return evaluate_answer(payload.answer, payload.level)
+    return evaluate_answer(payload.question, payload.answer, payload.level)
