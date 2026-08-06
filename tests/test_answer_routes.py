@@ -15,7 +15,7 @@ def test_answer_route():
 
     assert response.status_code == 200
 
-    data = responde.json()
+    data = response.json()
 
     assert "score" in data
     assert "feedback" in data
