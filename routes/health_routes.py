@@ -1,4 +1,5 @@
 from fastapi import APIRouter
+from fastapi.responses import FileResponse
 
 
 router = APIRouter()
@@ -12,3 +13,8 @@ def get_root():
 @router.get("/health")
 def health_check():
     return {"status": "ok"}
+
+
+@router.get("/favicon.ico", include_in_schema=False)
+def favicon():
+    return FileResponse("favicon.ico")
