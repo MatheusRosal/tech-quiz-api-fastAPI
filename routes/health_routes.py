@@ -12,7 +12,7 @@ def get_root():
 
 @router.get("/health")
 def health_check():
-    return {"status": "ok"}
+    return {"status": "ok", "environment": "docker-dev"}
 
 
 @router.get("/favicon.ico", include_in_schema=False)
