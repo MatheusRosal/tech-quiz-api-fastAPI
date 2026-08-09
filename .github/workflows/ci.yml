@@ -37,4 +37,20 @@ jobs: # tarefas grandes da pipeline
         run: pytest -v
 
       - name: Buildar imagem Docker
-        run: docker build -t tech-quiz-api . 
+        run: docker build -t tech-quiz-api .
+
+      - name: Subir container
+        run: docker compose -f docker-compose.yml up --build -d
+
+      - name: Healthcheck da API
+        run: |
+          sleep 5
+          curl -f http://localhost:8000/health
+
+      - name: Mostrar logs do container
+        if: always()
+        run: docker compose -f docker-compose.yml logs
+
+      - name: Derrubar container
+        if: always()
+        run: docker compose -f docker-compose.yml down
