@@ -10,7 +10,7 @@ on: # quando rodar
 
 jobs: # tarefas grandes da pipeline
   tests: # identificador do job
-    name: Rodar testes  # nome visível do job
+    name: Validar API  # nome visível do job
     runs-on: ubuntu-latest  # máquina temporária usada pelo GitHub
 
     steps:
