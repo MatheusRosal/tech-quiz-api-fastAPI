@@ -1,7 +1,7 @@
 .PHONY: test dev down logs docker-build prod-up prod-down prod-logs ci-local
 
 test:
-	pytest -v
+	ENVIRONMENT=test pytest -v
 dev:
 	docker compose up --build
 
@@ -24,7 +24,7 @@ prod-logs:
 	docker compose -f docker-compose.yml logs -f
 
 ci-local:
-	pytest -v
+	ENVIRONMENT=test pytest -v
 	docker build -t tech-quiz-api .
 	docker compose -f docker-compose.yml up --build -d
 	sleep 5
