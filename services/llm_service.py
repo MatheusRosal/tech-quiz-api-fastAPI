@@ -1,5 +1,7 @@
 from openai import OpenAI
+from openai import APIConnectionError, RateLimitError, APIError, AuthenticationError
 from core.config import settings
+from fastapi import HTTPException
 
 
 
@@ -30,16 +32,55 @@ def generate_question_with_llm(topic: str, level: str) -> str:
     
     prompt = prompt_reader("prompts/question_generation_system.md", topic, level)
 
-    response = client.responses.create(
-        model=settings.OPENAI_MODEL,
-        instructions=prompt,
-        input=f"""
-        Topic:{topic}
-        level:{level}    
-        """,
-    )
-    
-    return response.output_text
+
+    try:
+        response = client.responses.create(
+            model=settings.OPENAI_MODEL,
+            instructions=prompt,
+            input=f"""
+            Topic: {topic}
+            level: {level}    
+            """,
+        )
+
+        question = response.output_text.strip()
+
+
+        if not question:
+            raise HTTPException(
+                status_code = 502,
+                detail="A IA retornou uma resposta vazia. Tente novamente mais tarde."
+            )
+        
+        return question
+
+    except AuthenticationError as e:
+        print(f"OpenAI authentication error: {e}")
+        raise HTTPException(
+            status_code=401,
+            detail="Erro de autenticação com o serviço de IA."
+        )
+    except APIConnectionError as e:
+        print(f"Failed to connect to OpenAI API: {e}")
+        raise HTTPException(
+            status_code=503,
+            detail="Não foi possível conectar ao serviço de IA. Tente novamente mais tarde."
+        )
+    except RateLimitError as e:
+        print(f"OpenAI API request exceeded rate limit: {e}")
+        raise HTTPException(
+            status_code=429,
+            detail="Limite ou cota de serviço de IA excedido. Tente novamente mais tarde."
+        )
+    except APIError as e:
+        print(f"An error has occurred in OpenAI API: {e}")
+        raise HTTPException(
+            status_code=502,
+            detail="O serviço de IA retornou um erro. Tente novamente mais tarde."
+        )
+
+
+   
 
 
 def evaluate_answer_with_llm(question: str, answer: str, level: str):
