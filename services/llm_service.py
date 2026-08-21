@@ -5,39 +5,63 @@ from fastapi import HTTPException
 from schemas.answer_schema import AnswerEvaluationResponse
 
 
+QUESTION_GENERATION_PROMPT_PATH = "prompts/question_generation_system.md"
+ANSWER_EVALUATION_PROMPT_PATH = "prompts/answer_evaluation_system.md"
+
 
 client = OpenAI(api_key=settings.OPENAI_API_KEY)
 
-def prompt_reader(caminho: str) -> str:
+
+def read_prompt_file(path: str) -> str:
     try:
-        with open(caminho, 'r', encoding='utf-8') as arquivo:
-            prompt = arquivo.read()
+        with open(path, 'r', encoding='utf-8') as file:
+            prompt = file.read()
         return prompt
     
     except FileNotFoundError:
-        print(f"Erro: Arquivo {caminho} não encontrado")
+        print(f"Erro: Arquivo {path} não encontrado")
+        raise  HTTPException(
+            status_code=500,
+            detail="Arquivo de prompt não encontrado"
+        )
+
     except UnicodeDecodeError:
-        print(f"Não foi possivel decodificar o arquivo {caminho}")
+        print(f"Não foi possivel decodificar o arquivo {path}")
+        raise HTTPException(
+            status_code=500,
+            detail="Não foi posivel ler o arquivo de prompt"
+        )
+        
     except Exception as e:
         print(f"Ocorreu um erro inesperado {e}")
+        raise HTTPException(
+            status_code=500,
+            detail="Erro interno ao carregar prompt"
+        )
+
 
 
 def generate_question_with_llm(topic: str, level: str) -> str:
-    if settings.ENVIRONMENT == "test":
-        question = f"Pergunta generica sobre {topic} em um nivel {level}"
-        return question
-    
-    prompt = prompt_reader("prompts/question_generation_system.md")
 
+    #-----------------------------RESPOSTA MOCKADA-----------------------------
+
+
+    if settings.ENVIRONMENT == "test":
+        return generate_question_with_llm_MOCK(topic, level)
+
+
+    #-----------------------------RESPOSTA REAL(LLM)-----------------------------
+
+
+    prompt = read_prompt_file(QUESTION_GENERATION_PROMPT_PATH)
+
+    input_question = build_question_generation_input(topic, level)
 
     try:
         response = client.responses.create(
             model=settings.OPENAI_MODEL,
             instructions=prompt,
-            input=f"""
-            Topic: {topic}
-            level: {level}    
-            """,
+            input=input_question,
         )
 
         question = response.output_text.strip()
@@ -87,65 +111,21 @@ def evaluate_answer_with_llm(question: str, answer: str, level: str):
 
     if settings.ENVIRONMENT == "test":
         
-        score = 0
-        feedback = ""
-        #TODO: Adicionar serviço de llm real para avaliar resposta
-        #Por enquanto regra de negocio extensa para simular diferentes respostas
-        if level == "beginner":
-            if len(answer) < 40:
-                score = 5
-                feedback = "Sua resposta está muito curta. Tente explicar melhor."
-            elif len(answer) < 120:
-                score = 7
-                feedback = "Boa resposta, mas ainda pode trazer mais detalhes"
-            else:
-                score = 9
-                feedback = "Ótima resposta. Você trouxe uma explicação mais completa."
-
-        elif level == "intermediate":
-            if len(answer) < 60:
-                score = 5
-                feedback = "Sua resposta está muito curta. Tente explicar melhor."
-            elif len(answer) < 160:
-                score = 7
-                feedback = "Boa resposta, mas ainda pode trazer mais detalhes"
-            else:
-                score = 9
-                feedback = "Ótima resposta. Você trouxe uma explicação mais completa."
-
-        else:
-            if len(answer) < 100:
-                score = 5
-                feedback = "Sua resposta está muito curta. Tente explicar melhor."
-            elif len(answer) < 220:
-                score = 7
-                feedback = "Boa resposta, mas ainda pode trazer mais detalhes"
-            else:
-                score = 9
-                feedback = "Ótima resposta. Você trouxe uma explicação mais completa."
-
-        return {
-            "score": score,
-            "feedback": feedback
-        }
-
-
+        return evaluate_answer_with_llm_MOCK(answer, level)
 
 
     #-----------------------------RESPOSTA REAL(LLM)-----------------------------
 
     
-    prompt = prompt_reader("prompts/answer_evaluation_system.md")
+    prompt = read_prompt_file(ANSWER_EVALUATION_PROMPT_PATH)
+
+    input_answer = build_answer_evaluation_input(question, answer, level)
     
     try:
         response = client.responses.parse(
             model=settings.OPENAI_MODEL,
             instructions=prompt,
-            input=f""" 
-            Question: {question} 
-            Answer: {answer} 
-            Level: {level}
-            """,
+            input=input_answer,
             text_format=AnswerEvaluationResponse
         )
         
@@ -185,3 +165,75 @@ def evaluate_answer_with_llm(question: str, answer: str, level: str):
         )
 
 
+
+def evaluate_answer_with_llm_MOCK(answer: str, level: str) -> dict:
+
+    #-----------------------------RESPOSTA MOCKADA-----------------------------
+        
+    score = 0
+    feedback = ""
+    if level == "beginner":
+        if len(answer) < 40:
+            score = 5
+            feedback = "Sua resposta está muito curta. Tente explicar melhor."
+        elif len(answer) < 120:
+            score = 7
+            feedback = "Boa resposta, mas ainda pode trazer mais detalhes"
+        else:
+            score = 9
+            feedback = "Ótima resposta. Você trouxe uma explicação mais completa."
+
+    elif level == "intermediate":
+        if len(answer) < 60:
+            score = 5
+            feedback = "Sua resposta está muito curta. Tente explicar melhor."
+        elif len(answer) < 160:
+            score = 7
+            feedback = "Boa resposta, mas ainda pode trazer mais detalhes"
+        else:
+            score = 9
+            feedback = "Ótima resposta. Você trouxe uma explicação mais completa."
+
+    else:
+        if len(answer) < 100:
+            score = 5
+            feedback = "Sua resposta está muito curta. Tente explicar melhor."
+        elif len(answer) < 220:
+            score = 7
+            feedback = "Boa resposta, mas ainda pode trazer mais detalhes"
+        else:
+            score = 9
+            feedback = "Ótima resposta. Você trouxe uma explicação mais completa."
+
+    return {
+        "score": score,
+        "feedback": feedback
+    }
+
+
+
+def generate_question_with_llm_MOCK(topic: str, level: str) -> str:
+
+    #-----------------------------RESPOSTA MOCKADA-----------------------------
+
+    question = f"Pergunta generica sobre {topic} em um nivel {level}"
+    return question
+
+
+
+def build_question_generation_input(topic: str, level: str) -> str:
+
+    return f"""
+            Topic: {topic}
+            level: {level}    
+            """
+
+
+
+def build_answer_evaluation_input(question: str, answer: str, level: str) -> str:
+
+    return f""" 
+            Question: {question} 
+            Answer: {answer} 
+            Level: {level}
+            """
